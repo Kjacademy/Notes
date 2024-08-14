@@ -5,4 +5,9 @@
     <string name="note_title">Note title</string>
     <string name="note_subtitle">Note subtitle</string>
     <string name="miscellaneous">Miscellaneous</string>
+    <string name="add_image">Add image</string>
+    <string name="add_url">Add URL</string>
+    <string name="enter_url">Enter URL</string>
+    <string name="add">ADD</string>
+    <string name="cancel">CANCEL</string>
 </resources>

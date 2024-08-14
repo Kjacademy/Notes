@@ -1,5 +1,7 @@
 package com.kissj.notes.adapters
 
+import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +11,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.kissj.notes.R
 import com.kissj.notes.entities.Note
+import com.makeramen.roundedimageview.RoundedImageView
 
 class NotesAdapter(val notes: List<Note>) : RecyclerView.Adapter<NotesAdapter.NotesViewHolder>() {
 
@@ -31,27 +34,30 @@ class NotesAdapter(val notes: List<Note>) : RecyclerView.Adapter<NotesAdapter.No
         return position
     }
 
-    class NotesViewHolder : RecyclerView.ViewHolder {
-        val textTitle: TextView
-        val textSubtitle: TextView
-        val textDateTime: TextView
-        val linearLayout: LinearLayout
-
-        constructor(itemView: View) : super(itemView) {
-            textTitle = itemView.findViewById(R.id.textTitle)
-            textSubtitle = itemView.findViewById(R.id.textSubtitle)
-            textDateTime = itemView.findViewById(R.id.textDateTime)
-            linearLayout = itemView.findViewById(R.id.layoutNote)
-        }
+    class NotesViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val textTitle: TextView = itemView.findViewById(R.id.textTitle)
+        private val textSubtitle: TextView = itemView.findViewById(R.id.textSubtitle)
+        private val textDateTime: TextView = itemView.findViewById(R.id.textDateTime)
+        private val linearLayout: LinearLayout = itemView.findViewById(R.id.layoutNote)
+        private val imageNote: RoundedImageView = itemView.findViewById(R.id.imageNote)
 
         fun setNote(note: Note) {
-            textTitle.setText(note.title)
-            textSubtitle.setText(note.subTitle)
-            textDateTime.setText(note.dateTime)
+            textTitle.text = note.title
+            textSubtitle.text = note.subTitle
+            textDateTime.text = note.dateTime
 
+            val gradientDrawable = linearLayout.background as GradientDrawable
             if (note.color.isNotBlank()) {
-                val gradientDrawable = linearLayout.background as GradientDrawable
-                gradientDrawable.setColor(android.graphics.Color.parseColor(note.color))
+                gradientDrawable.setColor(Color.parseColor(note.color))
+            } else {
+                gradientDrawable.setColor(Color.parseColor("#333333"))
+            }
+
+            if (note.imagePath.isNotBlank()) {
+                imageNote.setImageBitmap(BitmapFactory.decodeFile(note.imagePath))
+                imageNote.visibility = View.VISIBLE
+            } else {
+                imageNote.visibility = View.GONE
             }
         }
     }
