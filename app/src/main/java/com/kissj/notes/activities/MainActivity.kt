@@ -13,8 +13,9 @@ import com.kissj.notes.R
 import com.kissj.notes.adapters.NotesAdapter
 import com.kissj.notes.database.NotesDatabase
 import com.kissj.notes.entities.Note
+import com.kissj.notes.listeners.NotesListener
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), NotesListener {
     private lateinit var notesRecycleView: RecyclerView
     private val notesList = ArrayList<Note>()
     private lateinit var notesAdapter: NotesAdapter
@@ -35,13 +36,20 @@ class MainActivity : ComponentActivity() {
             openCreateNoteActivity.launch(createNoteActivityIntent)
         }
 
-        notesAdapter = NotesAdapter(notesList)
+        notesAdapter = NotesAdapter(notesList, this)
         notesRecycleView = findViewById(R.id.notesRecyclerView)
         notesRecycleView.layoutManager =
             StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
         notesRecycleView.adapter = notesAdapter
 
         getNodes()
+    }
+
+    override fun noteClicked(note: Note, position: Int) {
+        val editNoteActivityIntent = Intent(applicationContext, CreateNoteActivity::class.java)
+        editNoteActivityIntent.putExtra("isViewOrUpdate", true )
+        editNoteActivityIntent.putExtra("note", note)
+        openCreateNoteActivity.launch(editNoteActivityIntent)
     }
 
     private fun getNodes() {

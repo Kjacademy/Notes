@@ -3,6 +3,7 @@ package com.kissj.notes.entities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.io.Serializable
 
 @Entity(tableName = "notes")
 data class Note(
@@ -30,4 +31,4 @@ data class Note(
 
     @ColumnInfo(name = "web_link")
     var webLink: String = ""
-)
+) : Serializable

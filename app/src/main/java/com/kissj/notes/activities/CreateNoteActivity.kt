@@ -1,10 +1,14 @@
 package com.kissj.notes.activities
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.AsyncTask
@@ -13,7 +17,10 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Patterns
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -26,6 +33,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.kissj.notes.R
 import com.kissj.notes.database.NotesDatabase
 import com.kissj.notes.entities.Note
@@ -34,7 +42,6 @@ import java.util.Locale
 
 
 const val REQUEST_CODE_STORAGE_PERMISSION = 1
-const val REQUEST_CODE_SELECT_IMAGE = 2
 
 class CreateNoteActivity : ComponentActivity() {
 
@@ -44,6 +51,12 @@ class CreateNoteActivity : ComponentActivity() {
     private lateinit var textDateTime: TextView
     private lateinit var viewSubtitleIndicator: View
     private lateinit var imageNote: ImageView
+    private lateinit var textWebUrl: TextView
+    private lateinit var layoutWebUrl: LinearLayout
+    private lateinit var dialogAddUrl: AlertDialog
+
+    private lateinit var alreadyAvailableNote: Note
+
     private var selectedNoteColor = "#333333"
     private var selectedImagePath = ""
     private val openGallery =
@@ -53,8 +66,7 @@ class CreateNoteActivity : ComponentActivity() {
                     val uri = it.data?.data!!
                     val inputStream = contentResolver.openInputStream(uri)
                     val bitmap = BitmapFactory.decodeStream(inputStream)
-                    imageNote.setImageBitmap(bitmap)
-                    imageNote.visibility = View.VISIBLE
+                    setImageNoteBitmap(bitmap)
                     selectedImagePath = getPathFromUri(uri)
                 }
             }
@@ -90,6 +102,14 @@ class CreateNoteActivity : ComponentActivity() {
         textDateTime.setText(LocalDate.now().toString())
         imageNote = findViewById(R.id.imageNote)
 
+        textWebUrl = findViewById(R.id.textWebUrl)
+        layoutWebUrl = findViewById(R.id.layoutWebURL)
+
+        if (intent.getBooleanExtra("isViewOrUpdate", false)) {
+            alreadyAvailableNote = intent.getSerializableExtra("note") as Note
+            setNote(note = alreadyAvailableNote)
+        }
+
         initMiscellaneous()
         setSubtitleIndicatorColor()
     }
@@ -110,23 +130,25 @@ class CreateNoteActivity : ComponentActivity() {
     }
 
     private fun saveNote() {
-        if (inputNoteTitle.getText().isNullOrBlank()) {
+        if (inputNoteTitle.text.isNullOrBlank()) {
             Toast.makeText(this, "Note title is mandatory", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (inputNote.getText().isNullOrBlank()) {
+        if (inputNote.text.isNullOrBlank()) {
             Toast.makeText(this, "Note content is mandatory", Toast.LENGTH_SHORT).show()
             return
         }
 
         val note = Note(
+            id = alreadyAvailableNote?.id,
             title = inputNoteTitle.text.toString(),
             subTitle = inputNoteSubtitle.text.toString(),
             dateTime = textDateTime.text.toString(),
             noteText = inputNote.text.toString(),
             color = selectedNoteColor,
-            imagePath = selectedImagePath
+            imagePath = selectedImagePath,
+            webLink = textWebUrl.text?.toString() ?: ""
         )
 
         class SaveTask : AsyncTask<Void, Void, Void>() {
@@ -216,6 +238,16 @@ class CreateNoteActivity : ComponentActivity() {
             setSubtitleIndicatorColor()
         }
 
+        if (alreadyAvailableNote.color.isNotBlank()) {
+            when (alreadyAvailableNote.color) {
+                "#333333" -> layoutMiscellaneous.findViewById<View>(R.id.viewColor1).performClick()
+                "#fdbe3b" -> layoutMiscellaneous.findViewById<View>(R.id.viewColor2).performClick()
+                "#ff4842" -> layoutMiscellaneous.findViewById<View>(R.id.viewColor3).performClick()
+                "#3a52fc" -> layoutMiscellaneous.findViewById<View>(R.id.viewColor4).performClick()
+                "#000000" -> layoutMiscellaneous.findViewById<View>(R.id.viewColor5).performClick()
+            }
+        }
+
         layoutMiscellaneous.findViewById<LinearLayout>(R.id.layoutAddImage).setOnClickListener {
             bottomSheetBehaviour.state = BottomSheetBehavior.STATE_COLLAPSED
 
@@ -254,6 +286,11 @@ class CreateNoteActivity : ComponentActivity() {
             }
         }
 
+        layoutMiscellaneous.findViewById<LinearLayout>(R.id.layoutAddUrl).setOnClickListener {
+            bottomSheetBehaviour.state = BottomSheetBehavior.STATE_COLLAPSED
+            showAddUrlDialog()
+        }
+
     }
 
     private fun setSubtitleIndicatorColor() {
@@ -267,7 +304,7 @@ class CreateNoteActivity : ComponentActivity() {
         openGallery.launch(intent)
     }
 
-    private fun getPathFromUri(contentUri: Uri):String {
+    private fun getPathFromUri(contentUri: Uri): String {
         var filePath = ""
         val cursor = contentResolver.query(contentUri, null, null, null, null)
         if (cursor == null) {
@@ -280,5 +317,71 @@ class CreateNoteActivity : ComponentActivity() {
         }
 
         return filePath
+    }
+
+    @SuppressLint("ResourceType")
+    private fun showAddUrlDialog() {
+        if (!this::dialogAddUrl.isInitialized) {
+            val alertDialogBuilder = AlertDialog.Builder(this)
+            val view = LayoutInflater.from(applicationContext).inflate(
+                R.layout.layout_add_url,
+                findViewById(R.id.layoutAddUrlContainer)
+            )
+
+            alertDialogBuilder.setView(view)
+            dialogAddUrl = alertDialogBuilder.create()
+
+            dialogAddUrl.window?.let {
+                dialogAddUrl.window!!.setBackgroundDrawable(ColorDrawable(0))
+
+            }
+
+
+            val inputUrl = view.findViewById<EditText>(R.id.inputUrl)
+            inputUrl.requestFocus()
+
+            view.findViewById<TextView>(R.id.textAdd).setOnClickListener {
+                if (inputUrl.text.isNullOrBlank()) {
+                    Toast.makeText(applicationContext, "Enter URL ", Toast.LENGTH_SHORT).show()
+                } else if (!Patterns.WEB_URL.matcher(inputUrl.text).matches()) {
+                    Toast.makeText(applicationContext, "Enter a valid URL ", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
+                    textWebUrl.text = inputUrl.text
+                    layoutWebUrl.visibility = View.VISIBLE
+                    dialogAddUrl.dismiss()
+                }
+            }
+
+            view.findViewById<TextView>(R.id.textCancel).setOnClickListener {
+                dialogAddUrl.dismiss()
+            }
+        }
+        dialogAddUrl.show()
+    }
+
+    private fun setImageNoteBitmap(bitmap: Bitmap?) {
+        imageNote.setImageBitmap(bitmap)
+        imageNote.visibility = View.VISIBLE
+    }
+
+    private fun setNote(note: Note) {
+        inputNoteTitle.setText(note.title)
+        inputNoteSubtitle.setText(note.subTitle)
+        textDateTime.text = note.dateTime
+        inputNote.setText(note.noteText)
+        selectedNoteColor = note.color
+        setSubtitleIndicatorColor()
+
+        if (note.imagePath.isNotBlank()) {
+            val bitmap = BitmapFactory.decodeFile(note.imagePath)
+            setImageNoteBitmap(bitmap)
+            selectedImagePath = note.imagePath
+        }
+
+        if (note.webLink.isNotBlank()) {
+            textWebUrl.text = note.webLink
+            layoutWebUrl.visibility = View.VISIBLE
+        }
     }
 }

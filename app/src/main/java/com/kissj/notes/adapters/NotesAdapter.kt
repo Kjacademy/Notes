@@ -11,9 +11,11 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.kissj.notes.R
 import com.kissj.notes.entities.Note
+import com.kissj.notes.listeners.NotesListener
 import com.makeramen.roundedimageview.RoundedImageView
 
-class NotesAdapter(val notes: List<Note>) : RecyclerView.Adapter<NotesAdapter.NotesViewHolder>() {
+class NotesAdapter(val notes: List<Note>, val notesListener: NotesListener) :
+    RecyclerView.Adapter<NotesAdapter.NotesViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NotesViewHolder {
         return NotesViewHolder(
@@ -24,6 +26,9 @@ class NotesAdapter(val notes: List<Note>) : RecyclerView.Adapter<NotesAdapter.No
 
     override fun onBindViewHolder(holder: NotesViewHolder, position: Int) {
         holder.setNote(notes[position])
+        holder.layoutNote.setOnClickListener {
+            notesListener.noteClicked(notes[position], position)
+        }
     }
 
     override fun getItemCount(): Int {
@@ -38,7 +43,7 @@ class NotesAdapter(val notes: List<Note>) : RecyclerView.Adapter<NotesAdapter.No
         private val textTitle: TextView = itemView.findViewById(R.id.textTitle)
         private val textSubtitle: TextView = itemView.findViewById(R.id.textSubtitle)
         private val textDateTime: TextView = itemView.findViewById(R.id.textDateTime)
-        private val linearLayout: LinearLayout = itemView.findViewById(R.id.layoutNote)
+        val layoutNote: LinearLayout = itemView.findViewById(R.id.layoutNote)
         private val imageNote: RoundedImageView = itemView.findViewById(R.id.imageNote)
 
         fun setNote(note: Note) {
@@ -46,7 +51,7 @@ class NotesAdapter(val notes: List<Note>) : RecyclerView.Adapter<NotesAdapter.No
             textSubtitle.text = note.subTitle
             textDateTime.text = note.dateTime
 
-            val gradientDrawable = linearLayout.background as GradientDrawable
+            val gradientDrawable = layoutNote.background as GradientDrawable
             if (note.color.isNotBlank()) {
                 gradientDrawable.setColor(Color.parseColor(note.color))
             } else {
